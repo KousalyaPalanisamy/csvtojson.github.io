@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSV/Excel to JSON Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100vh;
+        background: #1e1e2e;
+        color: #e0e0e0;
+      }
+      h2 {
+        color: #ffffff;
+        margin-bottom: 10px;
+      }
+      .file-upload {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 10px 0 20px;
+      }
+      .file-upload input[type="file"] {
+        display: none;
+      }
+      .file-upload label {
+        padding: 10px 15px;
+        background: #44475a;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: 0.3s;
+      }
+      .file-upload label:hover {
+        background: #6272a4;
+      }
+      .file-name {
+        font-size: 14px;
+        color: #bbbbbb;
+      }
+      button {
+        background-color: #50fa7b;
+        color: #282a36;
+        font-size: 14px;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: 0.3s;
+        margin-bottom: 20px;
+      }
+      button:hover {
+        background-color: #40d77e;
+      }
+      .container {
+        display: flex;
+        width: 100%;
+        height: 70vh;
+        max-width: 1200px;
+        gap: 20px;
+      }
+      .panel {
+        flex: 1;
+        padding: 15px;
+        border-radius: 8px;
+        background: #2c2c3a;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+        position: relative;
+      }
+      .panel h3 {
+        margin: 0;
+        padding: 10px;
+        background: #44475a;
+        color: white;
+        border-radius: 5px;
+        text-align: center;
+        position: relative;
+      }
+      .table-container {
+        overflow: auto;
+        flex-grow: 1;
+        width: 100%;
+        max-height: 100%;
+        border: 1px solid #44475a;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        background: #282a36;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        border: 1px solid #44475a;
+        padding: 10px;
+        text-align: left;
+        white-space: nowrap;
+        color: #f8f8f2;
+      }
+      th {
+        background-color: #6272a4;
+        color: white;
+      }
+      tr:nth-child(even) {
+        background-color: #3b3e52;
+      }
+      pre {
+        background: #191a21;
+        color: #f8f8f2;
+        padding: 15px;
+        text-align: left;
+        overflow: auto;
+        flex-grow: 1;
+        border-radius: 5px;
+        position: relative;
+      }
+      .icon-button {
+        background: #44475a;
+        border: none;
+        cursor: pointer;
+        color: white;
+        font-size: 18px;
+        padding: 3px;
+        transition: 0.3s;
+      }
+
+      .icon-button:hover {
+        background: #6272a4;
+      }
+
+      .icon-button:active {
+        transform: scale(0.9);
+      }
+
+      .json-controls {
+        position: absolute;
+        right: 15px;
+        display: flex;
+        gap: 2px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: white;
+        font-size: 18px;
+        transition: transform 0.2s ease-in-out;
+      }
+    </style>
+    <script>
+      const copyIcon = `<svg
+              width="30px"
+              height="30px"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                id="Vector"
+                d="M9 9V6.2002C9 5.08009 9 4.51962 9.21799 4.0918C9.40973 3.71547 9.71547 3.40973 10.0918 3.21799C10.5196 3 11.0801 3 12.2002 3H17.8002C18.9203 3 19.4801 3 19.9079 3.21799C20.2842 3.40973 20.5905 3.71547 20.7822 4.0918C21.0002 4.51962 21.0002 5.07967 21.0002 6.19978V11.7998C21.0002 12.9199 21.0002 13.48 20.7822 13.9078C20.5905 14.2841 20.2839 14.5905 19.9076 14.7822C19.4802 15 18.921 15 17.8031 15H15M9 9H6.2002C5.08009 9 4.51962 9 4.0918 9.21799C3.71547 9.40973 3.40973 9.71547 3.21799 10.0918C3 10.5196 3 11.0801 3 12.2002V17.8002C3 18.9203 3 19.4801 3.21799 19.9079C3.40973 20.2842 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H11.8036C12.9215 21 13.4805 21 13.9079 20.7822C14.2842 20.5905 14.5905 20.2839 14.7822 19.9076C15 19.4802 15 18.921 15 17.8031V15M9 9H11.8002C12.9203 9 13.4801 9 13.9079 9.21799C14.2842 9.40973 14.5905 9.71547 14.7822 10.0918C15 10.5192 15 11.079 15 12.1969L15 15"
+                stroke="#000000"
+                stroke-width="2"
+              ></path>
+            </svg>`;
+
+      const tickIcon = `<svg
+              width="30px"
+              height="30px"
+              viewBox="-2.4 -2.4 28.80 28.80"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <g id="SVGRepo_iconCarrier">
+                <path
+                  d="M22 11.1V6.9C22 3.4 20.6 2 17.1 2H12.9C9.4 2 8 3.4 8 6.9V8H11.1C14.6 8 16 9.4 16 12.9V16H17.1C20.6 16 22 14.6 22 11.1Z"
+                  stroke="#23c40e"
+                  stroke-width="1.5"
+                ></path>
+                <path
+                  d="M16 17.1V12.9C16 9.4 14.6 8 11.1 8H6.9C3.4 8 2 9.4 2 12.9V17.1C2 20.6 3.4 22 6.9 22H11.1C14.6 22 16 20.6 16 17.1Z"
+                  stroke="#23c40e"
+                  stroke-width="1.5"
+                ></path>
+                <path
+                  d="M6.08008 15L8.03008 16.95L11.9201 13.05"
+                  stroke="#23c40e"
+                  stroke-width="1.5"
+                ></path>
+              </g>
+            </svg>`;
+            
+      document.addEventListener("DOMContentLoaded", function () {
+        document
+          .getElementById("fileInput")
+          .addEventListener("change", handleFile);
+
+          jsonOutput.addEventListener("keydown", function (event) {
+          if (event.ctrlKey && event.key === "a") {
+            event.preventDefault();
+            const range = document.createRange();
+            range.selectNodeContents(jsonOutput);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        });
+      });
+
+      function handleFile(event) {
+        const file = event.target.files[0];
+        if (file) {
+          document.getElementById("fileName").textContent = file.name;
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            displayTable(json);
+          };
+          reader.readAsArrayBuffer(file);
+        }
+      }
+
+      function displayTable(data) {
+        const table = document.getElementById("fileTable");
+        table.innerHTML = "";
+        data.forEach((row, rowIndex) => {
+          const tr = document.createElement("tr");
+          row.forEach((cell) => {
+            const td = document.createElement(rowIndex === 0 ? "th" : "td");
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
+          table.appendChild(tr);
+        });
+      }
+
+      function convertToJSON() {
+        const table = document.getElementById("fileTable");
+        const rows = table.querySelectorAll("tr");
+        if (rows.length === 0) return;
+
+        const headers = Array.from(rows[0].children).map(
+          (th) => th.textContent
+        );
+        const jsonData = Array.from(rows)
+          .slice(1)
+          .map((row) => {
+            const cells = row.children;
+            let obj = {};
+            headers.forEach((header, index) => {
+              obj[header] = cells[index] ? cells[index].textContent : "";
+            });
+            return obj;
+          });
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        document.getElementById("jsonOutput").textContent = jsonString;
+      }
+
+      function copyToClipboard() {
+        const jsonOutput = document.getElementById("jsonOutput").textContent;
+        if (jsonOutput.trim() === "") return;
+        navigator.clipboard.writeText(jsonOutput).then(() => {
+          const copyButton = document.getElementById("copyButton");
+          copyButton.innerHTML = tickIcon;
+          setTimeout(() => {
+            copyButton.innerHTML = copyIcon;
+          }, 4000);
+        });
+      }
+
+      function downloadJSON() {
+        const jsonOutput = document.getElementById("jsonOutput").textContent;
+        if (jsonOutput.trim() === "") return;
+        const blob = new Blob([jsonOutput], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "data.json";
+        a.click();
+      }
+
+    </script>
+  </head>
+  <body>
+    <h2>CSV/Excel to JSON Converter</h2>
+    <div class="file-upload">
+      <label for="fileInput">Choose File</label>
+      <input type="file" id="fileInput" accept=".csv, .xls, .xlsx" />
+      <span class="file-name" id="fileName">No file selected</span>
+    </div>
+    <button onclick="convertToJSON()">Convert</button>
+    <div class="container">
+      <div class="panel">
+        <h3>File Preview</h3>
+        <div class="table-container">
+          <table id="fileTable"></table>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>JSON Output</h3>
+        <div class="json-controls">
+          <button
+            id="copyButton"
+            class="icon-button"
+            onclick="copyToClipboard()"
+            title="Copy"
+          >
+            <svg
+              width="30px"
+              height="30px"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                id="Vector"
+                d="M9 9V6.2002C9 5.08009 9 4.51962 9.21799 4.0918C9.40973 3.71547 9.71547 3.40973 10.0918 3.21799C10.5196 3 11.0801 3 12.2002 3H17.8002C18.9203 3 19.4801 3 19.9079 3.21799C20.2842 3.40973 20.5905 3.71547 20.7822 4.0918C21.0002 4.51962 21.0002 5.07967 21.0002 6.19978V11.7998C21.0002 12.9199 21.0002 13.48 20.7822 13.9078C20.5905 14.2841 20.2839 14.5905 19.9076 14.7822C19.4802 15 18.921 15 17.8031 15H15M9 9H6.2002C5.08009 9 4.51962 9 4.0918 9.21799C3.71547 9.40973 3.40973 9.71547 3.21799 10.0918C3 10.5196 3 11.0801 3 12.2002V17.8002C3 18.9203 3 19.4801 3.21799 19.9079C3.40973 20.2842 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H11.8036C12.9215 21 13.4805 21 13.9079 20.7822C14.2842 20.5905 14.5905 20.2839 14.7822 19.9076C15 19.4802 15 18.921 15 17.8031V15M9 9H11.8002C12.9203 9 13.4801 9 13.9079 9.21799C14.2842 9.40973 14.5905 9.71547 14.7822 10.0918C15 10.5192 15 11.079 15 12.1969L15 15"
+                stroke="#000000"
+                stroke-width="2"
+              ></path>
+            </svg>
+          </button>
+          <button class="icon-button" onclick="downloadJSON()" title="Download">
+            <svg
+              width="30px"
+              height="30px"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M21 21H3M18 11L12 17M12 17L6 11M12 17V3"
+                stroke="#000000"
+                stroke-width="2"
+              ></path>
+            </svg>
+          </button>
+        </div>
+
+        <pre id="jsonOutput" contenteditable="true"></pre>
+      </div>
+    </div>
+  </body>
+</html>
